@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
+const { start } = require('repl');
 
 require('dotenv').config();
 
@@ -13,6 +14,8 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates,
     ]
 });
+
+const startDate = Date.now();
 
 
 client.on('ready', () => {
@@ -78,13 +81,25 @@ client.on('voiceStateUpdate', (oldState, newState) => {
     } else if (oldChannel && !newChannel) {
         // User left a voice channel
         const currentTime = Date.now();
-        const startTime = voiceChannelTempTime.get(userId);
-        const elapsedTime = currentTime - startTime;
+        let startTime = voiceChannelTempTime.get(userId);
 
-        const time = voiceChannelTime.get(userId)
+        let time = voiceChannelTime.get(userId)
+
+
+        if (startTime == undefined) {
+            startTime = startDate;
+        }
+        if (time == undefined) {
+            time = 0;
+        }
+
+        const elapsedTime = currentTime - startTime;
+        console.log(elapsedTime)
+
+
+        voiceChannelTime.set(userId, time + elapsedTime);
 
         // Update the user's total voice channel time
-        voiceChannelTime.set(userId, time + elapsedTime);
 
         voiceChannelTempTime.set(userId, 0);
     }
@@ -98,7 +113,8 @@ function sortMapByValue(map) {
 
 // Command to display the leaderboard
 client.on('messageCreate', (message) => {
-    if (message.content === '!leaderboard') {
+    if (message.content === '!leaderboard' && !message.author.bot) {
+
         const sortedLeaderboard = sortMapByValue(voiceChannelTime);
 
         let leaderboardMessage = 'Leaderboard:\n';
@@ -124,7 +140,6 @@ client.on('messageCreate', (message) => {
           });
 
         message.channel.send( {embeds: [embed] });
-        //message.channel.send(leaderboardMessage);
     }
 });
  
